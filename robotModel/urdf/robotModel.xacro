@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+
+
+<robot name="robotModel" xmlns:macro='https://www.ros.org/wiki/macro' >
+
+
+  
+  <link name="base_link">
+    <visual>
+      <origin rpy="${pi} 0.0 ${pi}" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="file:///home/adrien/Bureau/ros_ws_theTank/src/robotModel/robot.stl"/>
+      </geometry>
+    </visual>
+  </link>
+  
+</robot>
