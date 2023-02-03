@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/opt/ros/noetic/include/**",
+                "/home/adrien/Bureau/ros_ws_theTank/src/afp_obstacle_avoidance/include/**",
+                "/home/adrien/Bureau/ros_ws_theTank/src/meanTopicDisplayer/include/**",
+                "/home/adrien/Bureau/ros_ws_theTank/devel/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        },
+        {
+            "name": "test",
+            "includePath": [
+                "/home/adrien/Bureau/ros_ws_theTank/build/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
