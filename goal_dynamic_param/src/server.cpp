@@ -12,10 +12,11 @@ ros::Publisher* pub_glob;
 
 ros::Subscriber global_odo_sub;
 nav_msgs::Odometry odo_glob;
-double theta_odo;
+double theta_odo = 0.0;
 bool done = true;
 bool odo_received = false;
 bool first_odo_received = false;
+int count_publish_0 = 5;
 
 float precision = 0.005;
 float precision_angle= (M_PI*0.5)/180.0;
@@ -42,6 +43,9 @@ ros::Time odo_time;
 ros::Duration ellapsed;
 
 geometry_msgs::Twist tosend;
+geometry_msgs::Twist tosend_zero;
+
+char toprint[50];
 
 typedef enum _msg_type
 {
@@ -74,6 +78,7 @@ typedef struct _goal
 }goal;
 
 goal mygoal {0.0,0.0,0.0};
+goal mygoalCopy {0.0,0.0,0.0};
 bool go_global = false;
 
 float keepAngle(float angle_rad)
@@ -105,61 +110,97 @@ float nearestPI_2Mult(float angle_rad)
 void callback(goal_dynamic_param::paramConfig &config, uint32_t level) {
    
 
-  
   switch (level)
   {
   case msg_type::goal_x:
-    /* code */
-    mygoal.x = config.goal_x_m;
+      /* code */
+      if(go_global == false)
+      {
+        mygoalCopy.x = config.goal_x_m;
+      }
     break;
   case msg_type::goal_y:
-    /* code */
-    mygoal.y = config.goal_y_m;
+      /* code */
+      if(go_global == false)
+      {
+        mygoalCopy.y = config.goal_y_m;
+      }
     break;
   case msg_type::goal_theta:
-    mygoal.theta = keepAngle(M_PI*config.goal_theta_deg/180.0);
+      if(go_global == false)
+      {
+        mygoalCopy.theta = keepAngle(M_PI*config.goal_theta_deg/180.0);
+      }
+      
     break;
   case msg_type::go:
-    go_global = true;
-    /* code */
+      if(go_global == false && done == true)
+      {
+        go_global = true;
+        mygoal = mygoalCopy;
+      }
     break;
   case msg_type::nearest_plus_pi_2:
-    /* code */
-    mygoal.x = odo_glob.pose.pose.position.x;
-    mygoal.y = odo_glob.pose.pose.position.y;
-    mygoal.theta = keepAngle(nearestPI_2Mult(theta_odo)+M_PI_2);
-    go_global = true;
+      if(go_global == false && done == true)
+      {
+      
+        mygoal.x = odo_glob.pose.pose.position.x;
+        mygoal.y = odo_glob.pose.pose.position.y;
+        mygoal.theta = keepAngle(nearestPI_2Mult(theta_odo)+M_PI_2);
+        go_global = true;
+        done = false;
+      }
     break;
 
   case msg_type::nearest_minus_pi_2:
-    mygoal.x = odo_glob.pose.pose.position.x;
-    mygoal.y = odo_glob.pose.pose.position.y;
-    mygoal.theta = keepAngle(nearestPI_2Mult(theta_odo)+M_PI_2);
-    go_global = true;
+      if(go_global == false && done == true)
+      {
+        mygoal.x = odo_glob.pose.pose.position.x;
+        mygoal.y = odo_glob.pose.pose.position.y;
+        mygoal.theta = keepAngle(nearestPI_2Mult(theta_odo)+M_PI_2);
+        go_global = true;
+        done = false;
+      }
     break;
   case go_1m_fwd_now:
-      mygoal.x = odo_glob.pose.pose.position.x + 1.0;
-      mygoal.y = odo_glob.pose.pose.position.y;
-      mygoal.theta = keepAngle(theta_odo);
-      go_global = true;
+      if(go_global == false && done == true)
+      {
+
+        mygoal.x = odo_glob.pose.pose.position.x + 1.0;
+        mygoal.y = odo_glob.pose.pose.position.y;
+        mygoal.theta = keepAngle(theta_odo);
+        go_global = true;
+        done = false;
+      }
+
     break;
   case go_1m_bwd_now:
-      mygoal.x = odo_glob.pose.pose.position.x - 1.0;
-      mygoal.y = odo_glob.pose.pose.position.y;
-      mygoal.theta = keepAngle(theta_odo);
-      go_global = true;
+      if(go_global == false && done == true)
+      {
+        mygoal.x = odo_glob.pose.pose.position.x - 1.0;
+        mygoal.y = odo_glob.pose.pose.position.y;
+        mygoal.theta = keepAngle(theta_odo);
+        go_global = true;
+      }
     break;
   case go_1m_side_left_now:
-      mygoal.x = odo_glob.pose.pose.position.x;
-      mygoal.y = odo_glob.pose.pose.position.y + 1.0;
-      mygoal.theta = keepAngle(theta_odo);
-      go_global = true;
+      if(go_global == false && done == true)
+      {
+
+        mygoal.x = odo_glob.pose.pose.position.x;
+        mygoal.y = odo_glob.pose.pose.position.y + 1.0;
+        mygoal.theta = keepAngle(theta_odo);
+        go_global = true;
+      }
     break;
   case go_1m_side_right_now:
-      mygoal.x = odo_glob.pose.pose.position.x;
-      mygoal.y = odo_glob.pose.pose.position.y - 1.0;
-      mygoal.theta = keepAngle(theta_odo);
-      go_global = true;
+      if(go_global == false && done == true)
+      {
+        mygoal.x = odo_glob.pose.pose.position.x;
+        mygoal.y = odo_glob.pose.pose.position.y - 1.0;
+        mygoal.theta = keepAngle(theta_odo);
+        go_global = true;
+      }
     break;
   case msg_type::msg_precision:
       precision = config.precision_m;
@@ -198,7 +239,7 @@ void callback(goal_dynamic_param::paramConfig &config, uint32_t level) {
 // void callback()
 void odo_callback(const nav_msgs::Odometry::ConstPtr &odo)
 {
-
+  
   odo_time_last = odo_glob.header.stamp;
   odo_glob = (*odo.get());
   odo_time = odo_glob.header.stamp;
@@ -219,30 +260,41 @@ void odo_callback(const nav_msgs::Odometry::ConstPtr &odo)
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
   theta_odo = keepAngle(yaw);
+  odo_received = true;
   
 
 }
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "goal_dynamic_param");
+
   ros::NodeHandle nh;  
   nh_glob = &nh;
-  ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel",20);
+
+  ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel",100);
   pub_glob = &pub;
+
+  tosend_zero.linear.x = 0.0;
+  tosend_zero.linear.y = 0.0;
+  tosend_zero.angular.z = 0.0;
+
   dynamic_reconfigure::Server<goal_dynamic_param::paramConfig> server;
   dynamic_reconfigure::Server<goal_dynamic_param::paramConfig>::CallbackType f;
   f = boost::bind(&callback, _1, _2);
   server.setCallback(f);
+
   global_odo_sub = nh.subscribe("/nav_msgs/odo",1000,odo_callback);
   while(ros::ok())
   {
     if(odo_received)
     {
       odo_received = false;
+
       if(go_global == true || done == false)
       {
         go_global = false;
         done = false;
+      
 
 
         float error_x = mygoal.x - odo_glob.pose.pose.position.x;
@@ -251,7 +303,7 @@ int main(int argc, char **argv) {
 
         if( fabs(error_x) > 30*precision || fabs(error_y) > 30*precision )
         {
-          if(error_x > error_y)
+          if(fabs(error_x) > fabs(error_y))
           {
             error_y = (error_y*30*precision)/(fabs(error_x));
             error_x = (error_x*30*precision)/(fabs(error_x));
@@ -295,6 +347,22 @@ int main(int argc, char **argv) {
           last_error_x = 0.0;
           last_error_y = 0.0;
           last_error_theta = 0.0;
+          pub.publish(tosend_zero);
+          count_publish_0 = 0;
+          ROS_INFO("Goal Reached\n");
+
+        }
+        else
+        {
+          pub.publish(tosend);
+        }
+      }
+      else if( done)
+      {
+        if(count_publish_0 <= 5)
+        {
+          count_publish_0++;
+          pub.publish(tosend_zero);
 
         }
       }
