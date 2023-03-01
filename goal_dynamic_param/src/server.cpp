@@ -5,6 +5,7 @@
 #include <geometry_msgs/Quaternion.h>
 #include <cmath>
 #include <tf/tf.h>
+#include <cstdio>
 
 ros::NodeHandle* nh_glob;
 ros::Publisher* pub_glob;
@@ -38,6 +39,8 @@ float Kp_theta = 1.0;
 float Kd_theta = 0.0;
 float Ki_theta = 0.0;
 
+float saturation_precision_multiplier = 30.0;
+
 ros::Time odo_time_last;
 ros::Time odo_time;
 ros::Duration ellapsed;
@@ -46,7 +49,7 @@ geometry_msgs::Twist tosend;
 geometry_msgs::Twist tosend_zero;
 
 char toprint[50];
-
+int countprint = 0;
 typedef enum _msg_type
 {
   goal_x,
@@ -67,6 +70,7 @@ typedef enum _msg_type
   msg_Kp_angle,
   msg_Ki_angle,
   msg_Kd_angle,
+  saturation_mult
 
 }msg_type;
 
@@ -157,7 +161,7 @@ void callback(goal_dynamic_param::paramConfig &config, uint32_t level) {
       {
         mygoal.x = odo_glob.pose.pose.position.x;
         mygoal.y = odo_glob.pose.pose.position.y;
-        mygoal.theta = keepAngle(nearestPI_2Mult(theta_odo)+M_PI_2);
+        mygoal.theta = keepAngle(nearestPI_2Mult(theta_odo)-M_PI_2);
         go_global = true;
         done = false;
       }
@@ -226,7 +230,10 @@ void callback(goal_dynamic_param::paramConfig &config, uint32_t level) {
   case msg_type::msg_Kd_angle:
       Kd_theta = config.Kd_angle;
     break;
+  case msg_type::saturation_mult:
+      saturation_precision_multiplier = config.saturation_precision_mult;
 
+    break;
       
   default:
     break;
@@ -271,6 +278,18 @@ int main(int argc, char **argv) {
   ros::NodeHandle nh;  
   nh_glob = &nh;
 
+  nh.getParam("/goal_dynamic_param/Kp_dist",Kp_dist);
+  nh.getParam("/goal_dynamic_param/Ki_dist",Ki_dist);
+  nh.getParam("/goal_dynamic_param/Kd_dist",Kd_dist);
+  nh.getParam("/goal_dynamic_param/Kp_angle",Kp_theta);
+  nh.getParam("/goal_dynamic_param/Ki_angle",Ki_theta);
+  nh.getParam("/goal_dynamic_param/Kd_angle",Kd_theta);
+  nh.getParam("/goal_dynamic_param/saturation_precision_mult",saturation_precision_multiplier);
+  nh.getParam("/goal_dynamic_param/precision_m",precision);
+  nh.getParam("/goal_dynamic_param/precision_deg",precision_angle);
+  precision_angle *= (M_PI)/(180.0);
+
+
   ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel",100);
   pub_glob = &pub;
 
@@ -301,17 +320,25 @@ int main(int argc, char **argv) {
         float error_y = mygoal.y - odo_glob.pose.pose.position.y;
         float error_theta = keepAngle(mygoal.theta-theta_odo);
 
-        if( fabs(error_x) > 30*precision || fabs(error_y) > 30*precision )
+
+        if(countprint++ > 6)
+        {
+          countprint = 0;
+          sprintf(toprint,"x %f y %f th %f",error_x,error_y,error_theta);
+          ROS_INFO(toprint);
+        }
+        
+        if( fabs(error_x) > saturation_precision_multiplier*precision || fabs(error_y) > saturation_precision_multiplier*precision )
         {
           if(fabs(error_x) > fabs(error_y))
           {
-            error_y = (error_y*30*precision)/(fabs(error_x));
-            error_x = (error_x*30*precision)/(fabs(error_x));
+            error_y = (error_y*saturation_precision_multiplier*precision)/(fabs(error_x));
+            error_x = (error_x*saturation_precision_multiplier*precision)/(fabs(error_x));
           }
-          else
+          else if ( fabs(error_y) > fabs(error_x))
           {
-            error_x = (error_x*30*precision)/(fabs(error_y));
-            error_y = (error_y*30*precision)/(fabs(error_y));
+            error_x = (error_x*saturation_precision_multiplier*precision)/(fabs(error_y));
+            error_y = (error_y*saturation_precision_multiplier*precision)/(fabs(error_y));
           }
         }
 
@@ -329,9 +356,12 @@ int main(int argc, char **argv) {
         float diff_error_y = error_y - last_error_y;
         float diff_error_theta = error_theta - last_error_theta;
 
-        tosend.linear.x = Kp_dist * error_x - Kd_dist*diff_error_x + Ki_dist*sum_error_x;
-        tosend.linear.y = Kp_dist * error_y - Kd_dist*diff_error_y + Ki_dist*sum_error_y;
+        float vxr = Kp_dist * error_x - Kd_dist*diff_error_x + Ki_dist*sum_error_x;
+        float vyr = Kp_dist * error_y - Kd_dist*diff_error_y + Ki_dist*sum_error_y;
         tosend.angular.z = Kp_theta* error_theta - Kd_theta*diff_error_theta + Ki_theta*sum_error_theta;
+        
+        tosend.linear.x = vxr*cos(theta_odo)+vyr*sin(theta_odo);
+        tosend.linear.y = vyr*cos(theta_odo)-vxr*sin(theta_odo);
 
         last_error_x = error_x;
         last_error_y = error_y;
@@ -347,6 +377,9 @@ int main(int argc, char **argv) {
           last_error_x = 0.0;
           last_error_y = 0.0;
           last_error_theta = 0.0;
+          sum_error_theta = 0.0;
+          sum_error_x = 0.0;
+          sum_error_y = 0.0;
           pub.publish(tosend_zero);
           count_publish_0 = 0;
           ROS_INFO("Goal Reached\n");
