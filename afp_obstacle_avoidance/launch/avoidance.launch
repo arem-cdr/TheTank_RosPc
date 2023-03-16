@@ -1,0 +1,4 @@
+<launch>
+    <node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output = "screen"/>
+    <node name="afp_obstacle_avoidance" pkg="afp_obstacle_avoidance" type="afp_obstacle_avoidance_node"/>
+</launch>

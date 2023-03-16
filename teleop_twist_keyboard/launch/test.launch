@@ -1,4 +1,4 @@
 <launch>
+  <remap from="/cmd_vel_teleop" to="/cmd_vel"/>
   <node pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" name="keyboard_node" output = "screen"></node>
-  <node pkg ="rqt_reconfigure" type ="rqt_reconfigure" name = "param_tweaking" output = "screen"> </node> 
 </launch>
