@@ -1,4 +1,0 @@
-<launch>
-    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find robotModel)/urdf/robotModel.xacro'"/>
-    <node name="rviz" pkg="rviz" type="rviz"/>
-</launch>
