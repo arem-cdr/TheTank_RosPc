@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 
-<robot name="robotModel" xmlns:macro='https://www.ros.org/wiki/macro' >
+<robot name="robotModel_withKF" xmlns:macro='https://www.ros.org/wiki/macro' >
 
 
   

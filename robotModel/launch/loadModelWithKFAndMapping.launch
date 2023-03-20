@@ -1,0 +1,7 @@
+<launch>
+    <param name="robot_description_withKF" command="$(find xacro)/xacro --inorder '$(find robotModel)/urdf/robotModelWithKF.xacro'"/>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find package_name)/rviz/mapping.rviz" />
+    <node name = "gmapping" pkg="gmapping" type ="slam_gmapping" args = "scan:=scan" />
+    <remap from="/cmd_vel_teleop" to="/cmd_vel"/>
+    <node pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" name="keyboard_node" output = "screen" _speed:=0.5 _turn:=1.5/>
+</launch>
